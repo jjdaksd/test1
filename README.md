@@ -1,3 +1,4 @@
+```
 import re
 from bs4 import BeautifulSoup
 
@@ -48,3 +49,4 @@ html_code = '<body><div id="table-container">Insert position</div></body>'
 titles = ['Title 1', 'Title 2', 'Title 3']
 data = [['1', '2', '3'], ['4', '5', '6'], ['7', '8', '9']]
 print(create_table(titles, data, html_code, 'Insert position'))
+```
