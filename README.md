@@ -1,52 +1,43 @@
 ```
-import re
-from bs4 import BeautifulSoup
+import os
+import shutil
+from tqdm import tqdm
 
-def create_table(titles, data, html_code, insert_position):
-    # 创建HTML页面
-    page = BeautifulSoup('<html></html>', 'html.parser')
+def get_directory_size(src, file_sizes):
+    for item in os.listdir(src):
+        s = os.path.join(src, item)
+        if os.path.isdir(s):
+            get_directory_size(s, file_sizes)
+        else:
+            file_sizes[s] = os.path.getsize(s)
 
-    # 创建表格
-    table = page.new_tag('table')
+def copy_directory(src, dst, pbar, copied_size, file_sizes):
+    for item in os.listdir(src):
+        s = os.path.join(src, item)
+        d = os.path.join(dst, item)
+        if os.path.isdir(s):
+            if not os.path.exists(d):
+                os.makedirs(d)
+            copied_size = copy_directory(s, d, pbar, copied_size, file_sizes)
+        else:
+            if not os.path.exists(d) or (os.path.exists(d) and (os.path.getsize(d) != file_sizes[s])):
+                with open(s, 'rb') as fsrc:
+                    with open(d, 'wb') as fdst:
+                        shutil.copyfileobj(fsrc, fdst, 1024*1024*10)
+                copied_size += file_sizes[s]
+                pbar.update(file_sizes[s])
+    return copied_size
 
-    # 创建表头
-    thead = page.new_tag('thead')
-    table.append(thead)
-    tr = page.new_tag('tr')
-    thead.append(tr)
+src_folder = '/path/to/src_folder'
+dst_folder = '/path/to/dst_folder'
 
-    # 将标题插入表头中
-    for title in titles:
-        th = page.new_tag('th')
-        th.string = title
-        tr.append(th)
+file_sizes = {}
+get_directory_size(src_folder, file_sizes)
 
-    # 创建表格主体
-    tbody = page.new_tag('tbody')
-    table.append(tbody)
+total_size = sum(file_sizes.values())
+copied_size = sum(os.path.getsize(f) for f in (os.path.join(dirpath, f) for dirpath, dirnames, files in os.walk(dst_folder) for f in files))
 
-    # 将数据插入表格中
-    for row in data:
-        tr = page.new_tag('tr')
-        tbody.append(tr)
-        for cell in row:
-            td = page.new_tag('td')
-            td.string = cell
-            tr.append(td)
+with tqdm(total=total_size, initial=copied_size, unit='B', unit_scale=True, desc='Copying...') as pbar:
+    copied_size = copy_directory(src_folder, dst_folder, pbar, copied_size, file_sizes)
 
-    # 查找插入位置
-    html_page = BeautifulSoup(html_code, 'html.parser')
-    insert_point = html_page.find(string=re.compile(insert_position))
-
-    # 插入HTML代码中
-    insert_point.insert_after(table)
-
-    # 返回HTML
-    return html_page.prettify()
-
-# 测试函数
-html_code = '<body><div id="table-container">Insert position</div></body>'
-titles = ['Title 1', 'Title 2', 'Title 3']
-data = [['1', '2', '3'], ['4', '5', '6'], ['7', '8', '9']]
-print(create_table(titles, data, html_code, 'Insert position'))
 ```
